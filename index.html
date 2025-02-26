@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Cross#</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #FFD700; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            position: relative;
+        }
+
+       
+        body::before {
+            content: "$ € ¥ £";
+            font-size: 80px;
+            color: rgba(0, 0, 0, 0.1);
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            font-weight: bold;
+            transform: rotate(-20deg);
+        }
+
+        body::after {
+            content: "₹ ₿ ₦ ₩";
+            font-size: 80px;
+            color: rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 20%;
+            right: 10%;
+            font-weight: bold;
+            transform: rotate(20deg);
+        }
+
+        .container {
+            background: black;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
+            max-width: 350px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            background: gold;
+            color: black;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        #result {
+            font-size: 18px;
+            margin-top: 15px;
+            color: red;
+        }
+
+        .currency-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .flag {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>$Currency Cross$</h1>
+        <input type="number" id="amount" placeholder="Enter amount">
+
+        <div class="currency-container">
+            <img id="fromFlag" class="flag" src="https://flagcdn.com/w40/us.png">
+            <select id="fromCurrency"></select>
+        </div>
+
+        <div class="currency-container">
+            <img id="toFlag" class="flag" src="https://flagcdn.com/w40/eu.png">
+            <select id="toCurrency"></select>
+        </div>
+
+        <button id="convertButton">Convert</button>
+        <h2 id="result"></h2>
+    </div>
+
+    <script>
+        const fromCurrency = document.getElementById('fromCurrency');
+        const toCurrency = document.getElementById('toCurrency');
+        const fromFlag = document.getElementById('fromFlag');
+        const toFlag = document.getElementById('toFlag');
+        const amount = document.getElementById('amount');
+        const convertButton = document.getElementById('convertButton');
+        const result = document.getElementById('result');
+
+        const defaultFromCurrency = 'USD';
+        const defaultToCurrency = 'EUR';
+        const apiUrl = 'https://api.exchangerate-api.com/v4/latest/';
+
+        function getCountryCode(currency) {
+            const specialCases = {
+                "EUR": "eu",
+                "GBP": "gb",
+                "USD": "us",
+                "JPY": "jp",
+                "INR": "in",
+                "CNY": "cn",
+                "AUD": "au",
+                "CAD": "ca",
+                "NZD": "nz",
+                "CHF": "ch",
+                "SEK": "se",
+                "SGD": "sg",
+                "ZMW": "zm", 
+                "NGN": "ng", 
+                "KES": "ke", 
+                "ZAR": "za"  
+            };
+
+            return specialCases[currency] || currency.slice(0, 2).toLowerCase();
+        }
+
+        async function fetchCurrencies() {
+            try {
+                const response = await fetch(apiUrl + 'USD');
+                const data = await response.json();
+                const currencies = Object.keys(data.rates);
+
+                currencies.forEach(currency => {
+                    const option1 = document.createElement('option');
+                    option1.value = currency;
+                    option1.textContent = currency;
+                    if (currency === defaultFromCurrency) option1.selected = true;
+                    fromCurrency.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = currency;
+                    option2.textContent = currency;
+                    if (currency === defaultToCurrency) option2.selected = true;
+                    toCurrency.appendChild(option2);
+                });
+
+                updateFlags();
+            } catch (error) {
+                console.error('Error fetching currencies:', error);
+            }
+        }
+
+        function updateFlags() {
+            const fromCode = getCountryCode(fromCurrency.value);
+            const toCode = getCountryCode(toCurrency.value);
+
+            fromFlag.src = `https://flagcdn.com/w40/${fromCode}.png`;
+            toFlag.src = `https://flagcdn.com/w40/${toCode}.png`;
+        }
+
+        async function convertCurrency() {
+            if (!amount.value) {
+                result.textContent = 'Please enter an amount';
+                return;
+            }
+
+            try {
+                const from = fromCurrency.value;
+                const to = toCurrency.value;
+                const amountValue = amount.value;
+
+                const response = await fetch(apiUrl + from);
+                const data = await response.json();
+                const rate = data.rates[to];
+                const convertedAmount = (amountValue * rate).toFixed(2);
+                
+                result.textContent = `${amountValue} ${from} = ${convertedAmount} ${to}`;
+            } catch (error) {
+                result.textContent = 'Error occurred during conversion';
+                console.error('Conversion error:', error);
+            }
+        }
+
+        fromCurrency.addEventListener('change', updateFlags);
+        toCurrency.addEventListener('change', updateFlags);
+        convertButton.addEventListener('click', convertCurrency);
+
+        fetchCurrencies();
+    </script>
+</body>
+</html>
